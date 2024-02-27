@@ -3,7 +3,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 3000;
-const db = require('./db'); // Import the database connection setup
+const pool = require('./db'); // Import the database connection setup
+console.log('Pool imported:', pool);
+
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -18,7 +20,7 @@ app.listen(port, () => {
 app.get('/api/flavors', async (req, res) => {
     try {
         // Query the database to select all flavors
-        const { rows } = await db.query('SELECT * FROM flavors');
+        const { rows } = await pool.query('SELECT * FROM flavors');
         // Send the fetched rows as JSON response
         res.json(rows);
     } catch (error) {
@@ -34,7 +36,7 @@ app.get('/api/flavors/:id', async (req, res) => {
     const { id } = req.params; // Extract the flavor ID from the URL parameters
     try {
       // Query the database to select the flavor with the given ID
-      const { rows } = await db.query('SELECT * FROM flavors WHERE id = $1', [id]);
+      const { rows } = await pool.query('SELECT * FROM flavors WHERE id = $1', [id]);
       // Check if a flavor was found
       if (rows.length === 0) {
         // If not found, send a 404 Not Found response
@@ -55,7 +57,7 @@ app.post('/api/flavors', async (req, res) => {
     const { name, is_favorite } = req.body; // Extract flavor details from the request body
     try {
       // Insert the new flavor into the database and return the created flavor
-      const { rows } = await db.query(
+      const { rows } = await pool.query(
         'INSERT INTO flavors (name, is_favorite) VALUES ($1, $2) RETURNING *',
         [name, is_favorite]
       );
@@ -76,14 +78,14 @@ app.put('/api/flavors/:id', async (req, res) => {
   
     try {
       // First, check if the flavor exists in the database
-      const checkFlavor = await db.query('SELECT * FROM flavors WHERE id = $1', [id]);
+      const checkFlavor = await pool.query('SELECT * FROM flavors WHERE id = $1', [id]);
       if (checkFlavor.rows.length === 0) {
         // If not found, send a 404 Not Found response
         return res.status(404).send('Flavor not found');
       }
   
       // Update the flavor in the database with the new details
-      const { rows } = await db.query(
+      const { rows } = await pool.query(
         'UPDATE flavors SET name = $1, is_favorite = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
         [name, is_favorite, id]
       );
@@ -104,7 +106,7 @@ app.delete('/api/flavors/:id', async (req, res) => {
   
     try {
       // First, check if the flavor exists in the database
-      const checkFlavor = await db.query('SELECT * FROM flavors WHERE id = $1', [id]);
+      const checkFlavor = await pool.query('SELECT * FROM flavors WHERE id = $1', [id]);
   
       if (checkFlavor.rows.length === 0) {
         // If not found, send a 404 Not Found response
@@ -112,7 +114,7 @@ app.delete('/api/flavors/:id', async (req, res) => {
       }
   
       // Delete the flavor from the database
-      await db.query('DELETE FROM flavors WHERE id = $1', [id]);
+      await pool.query('DELETE FROM flavors WHERE id = $1', [id]);
   
       // Send a 204 No Content response to indicate successful deletion
       res.status(204).send();
